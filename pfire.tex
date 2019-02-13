@@ -1,0 +1,300 @@
+\pdfminorversion=4
+\PassOptionsToPackage{x11names}{xcolor}
+\documentclass{beamer}
+%\documentclass[handout]{beamer}
+%\usepackage{handoutWithNotes}
+%\pgfpagesuselayout{4 on 1 with notes}[a4paper, border shrink=5mm]
+%% Method from https://github.com/gdiepen/latexbeamer-handoutWithNotes
+\usepackage{amsmath}
+\usepackage{subcaption}
+\usepackage{appendixnumberbeamer}
+\usepackage{animate}
+\usepackage{grffile}
+\usepackage[utf8]{inputenc}
+%\usepackage[hang,flushmargin]{footmisc}
+
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows, positioning}
+
+\usepackage[style=authortitle,backend=biber]{biblatex}
+\addbibresource{refs.bib}
+
+\usetheme{Sheffield}
+\useinnertheme{SheffieldCBM}
+
+\addbibresource{library.bib}
+
+\newsavebox{\foobox}
+\newcommand{\slantbox}[2][0]{\mbox{%
+        \sbox{\foobox}{#2}%
+        \hskip\wd\foobox
+        \pdfsave
+        \pdfsetmatrix{1 0 #1 1}%
+        \llap{\usebox{\foobox}}%
+        \pdfrestore
+}}
+\newcommand\unslant[2][-.25]{\slantbox[#1]{$#2$}}
+
+%  \item specially for beamer
+\renewcommand{\footnotesize}{\scriptsize}
+\renewcommand{\vec}{\mathbf}
+
+\tikzset{
+    userblock/.style={
+    rectangle,
+    rounded corners,
+    minimum width=3cm,
+    minimum height=1cm,
+    align = center,
+    draw=shefblue,
+    line width = 1pt,
+  },
+  flowblock/.style={
+    rectangle,
+    rounded corners,
+    minimum width=3cm,
+    minimum height=1cm,
+    align = center,
+    draw=sgreylight,
+    line width = 1pt,
+  },
+  arrow/.style={
+    line width = 1.5pt,
+    ->,
+    > = stealth,
+    draw=shefblue,
+    rounded corners
+    },
+  dashdouble/.style={
+    line width = 1.5pt,
+    <->,
+    > = stealth,
+    draw=shefblue!70,
+    },
+  dashbend/.style={
+    line width = 1.5pt,
+    ->,
+    > = stealth,
+    draw=shefblue!70,
+    bend right=20,
+    },
+}
+
+\newenvironment<>{varblock}[2][.9\textwidth]{%
+  \setlength{\textwidth}{#1}
+  \begin{actionenv}#3%
+    \def\insertblocktitle{#2}%
+    \par%
+    \usebeamertemplate{block begin}%
+}{%
+  \par%
+    \usebeamertemplate{block end}%
+  \end{actionenv}%
+}
+
+\begin{document}
+
+\title{Image Registration with pFIRE}
+\subtitle{CompBioMed Winter School 2019}
+\author[phil.tooley@sheffield.ac.uk]{Phil Tooley\\University of Sheffield}
+\date[2019/02/14]{\\14 February 2019}
+
+
+\begin{frame}
+\maketitle
+\end{frame}
+
+\section{Introductory Talk 09:00 -- 09:15}
+\begin{frame}
+  \frametitle{Session Layout}
+  \tableofcontents
+\end{frame}
+
+\subsection{What is image registration?}
+\begin{frame}
+  \frametitle{What is image registration?}
+  \begin{block}{Image Registration}
+    Image registration is the process by which one image an image is transformed by displacing
+    pixels to match another image as closely as possible
+  \end{block}
+  \begin{block}{}
+    The image which is transformed is known as the \emph{moved} image, and the target image to
+    which it is matched is known as the \emph{fixed image}
+  \end{block}
+\end{frame}
+
+\begin{frame}
+  \frametitle{What is image registration?}
+  \begin{center}
+    \includegraphics[scale=0.1]{registration_overlay}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Types of registration}
+  \only<1>{
+    \begin{block}{Rigid Registration}
+      \begin{itemize}
+        \item Global transformations which affect the whole image in the same way
+        \item E.g translation, scaling, linear shearing and rotation
+        \item Cannot describe non-linear or local deformations
+        \item Relatively simple to compute
+        \item Commonly used for alignment
+      \end{itemize}
+    \end{block}
+  }
+  \only<2>{
+    \begin{block}{Elastic registration}
+      \begin{itemize}
+        \item Displacement field which describes how individual image pixels are moved
+        \item Map can be arbitrarily high resolution 
+        \item In principle, describe any transformation
+        \item Computationally intensive
+        \item Useful in a wide range of applications
+      \end{itemize}
+      \alert{pFIRE performs \textbf{elastic} registration}
+    \end{block}
+  }
+\end{frame}
+
+\subsection{Applications for elastic registration}
+\begin{frame}
+  \frametitle{Applications for elastic registration}
+  \begin{itemize}
+    \item Segmentation by registration
+    \begin{itemize}
+      \item Manually segment first image
+      \item Register other images to first image
+      \item Use results to map segmentation to other images
+    \end{itemize}
+    \item Patient specific modelling (PSM)
+    \begin{itemize}
+      \item Create a generic model of structure
+      \item Register patient image to generic model
+      \item Use result to transform generic $\to$ patient specific model
+      \item Apply analysis to new PSM
+    \end{itemize}
+    \item Digital Volume Correlation (Stress/strain analysis)
+      \begin{itemize}
+        \item Image unstressed sample ($\mu$-CT)
+        \item Apply stress and image again
+        \item Register to produce displacement field
+        \item Differentiation yields strain field in sample
+      \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\subsection{How pFIRE works}
+\begin{frame}
+  \frametitle{How pFIRE works (briefly!)}
+  \begin{itemize}
+    \item Represent fixed and moved images with functions $f(\vec{x})$, $m(\vec{x})$
+    \item These give the value of the pixel at the point $\vec{x}$
+    \item A perfect mapping is a vector field $\vec{R}(\vec{x})$, such that
+    \begin{equation}
+      m(\vec{x} + \vec{R}(\vec{x})) = f(\vec{x})
+    \end{equation}
+    \item To register the images, find a function $\vec{R}(\vec{x})$ that satisfies this equation
+    \alert Problem: this form of the equation uses the already registered image.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Finding the displacement field}
+  \begin{itemize}
+    \item Taylor expand to get an expression that uses $f(\vec{x})$ and $m(\vec{x})$ 
+    \begin{equation}
+      f(\vec{x}) - m(\vec{x}) \simeq \frac{1}{2} \vec{R}(\vec{x})\cdot(\nabla \cdot f(\vec{x}) + m(\vec{x}))
+    \end{equation}
+    \item This now uses the two input images and the gradient of the images
+    \alert Another problem: equation is underdetermined!
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Finding the displacement field}
+  \begin{center}
+    \includegraphics[scale=0.1]{registration_overlay}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Finding the displacement field}
+  \begin{itemize}
+    \item Need to add additional constraints (Tikhonov Regularisation)
+    \item Add a smoothing constraint $\nabla^2 \vec{R}(\vec{x} = 0 $
+    \item Displacement is smooth is second derivative is zero everywhere
+    \item Problem is actually discrete -- have pixels in image and nodes in displacement field
+    \item Typically $N_{pixels} \gg N_{nodes}$, problem has $N_{nodes}$ DOF
+    \begin{equation}
+      \begin{bmatrix}\vec{f}-\vec{m} \\ 0\end{bmatrix} =
+        \begin{bmatrix}\vec{T} \\ \vec{L}\end{bmatrix} \cdot \vec{R}
+    \end{equation}
+    \item $\vec{T}$ is a non-square matrix mapping pixel information to map node terms
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{The pFIRE Algorithm}
+  \begin{itemize}
+    \item pFIRE solves the matrix equation:
+    \begin{equation}
+      \begin{bmatrix}\vec{T}^t & \vec{L}^t\end{bmatrix} \cdot
+      \begin{bmatrix}\vec{f}-\vec{m} \\ 0\end{bmatrix} =
+        \begin{bmatrix}\vec{T}^t \vec{T} + \vec{L}^t \vec{L} \end{bmatrix} \cdot \vec{R}
+    \end{equation}
+    \item Iterative solution: solve the matrix equation many times
+    \item Start with coarse node spacing
+    \item Each iteration converges towards the solution
+    \item Step converged when displacement field stops changing
+    \item Increasingly refine node spacing when previous step converges
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{The pFIRE Algorithm}
+  \begin{center}
+    \begin{tikzpicture}
+      \node (start) [flowblock] {Start with 3\\nodes per dim};
+      \node (innerstart) [flowblock, right = 1cm of start]{Solve equation \&\\Update displacements};
+      \draw [arrow] (start) -> (innerstart);
+      \node (innerbranch) [flowblock, right = 1cm of innerstart]{Check for\\convergence};
+      \draw [arrow] (innerstart) -- (innerbranch);
+      \draw [arrow] (innerbranch) |- node [below, pos=0.8]{Not converged} ($ (innerstart) + (0.5,1.5) $) 
+                                  -| (innerstart);
+      \node (outerbranch) [flowblock, below = 1cm of innerstart]{Refine node\\ spacing if needed};
+      \draw [arrow] (innerbranch) |- node[above, pos=0.7]{Converged}(outerbranch);
+      \draw [arrow] (outerbranch) -- (innerstart);
+      \node (finish) [flowblock, below = 1cm of start] {Finish};
+      \draw [arrow] (outerbranch) -- (finish);
+    \end{tikzpicture}
+  \end{center}
+  \alert Detailed algorithm description in Barber and Hose (2005) or Barber et al. (2007)
+\end{frame}
+
+\section{Hands on tutorial: 09:15 -- 10:45}
+\subsection{Access pFIRE on MareNostrum}
+\subsection{How to run pFIRE}
+\subsection{Visualising the output}
+
+\begin{frame}
+  \frametitle{Hands-on tutorial session}
+  \begin{itemize}
+    \item pFIRE Tutorial: https://insigneo.github.io/pFIRE/docs.html
+    \item[~]
+    \item MareNostrum readme: /gpfs/projects/nct00/nct00016/README
+    \item[~]
+    \item MareNostrum files: /gpfs/projects/nct00/nct00016/
+    \item[~]
+    \item Please complete the application survey
+  \end{itemize}
+\end{frame}
+
+\section{Coffee Break: 10:45 -- 11:00}
+\begin{frame}
+  \begin{center}
+    Thank You
+  \end{center}
+\end{frame}
+
+\end{document}

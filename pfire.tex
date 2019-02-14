@@ -114,8 +114,8 @@
 \begin{frame}
   \frametitle{What is image registration?}
   \begin{block}{Image Registration}
-    Image registration is the process by which one image an image is transformed by displacing
-    pixels to match another image as closely as possible
+    Image registration is the process by which one image is transformed by displacing pixels to
+    match another image as closely as possible
   \end{block}
   \begin{block}{}
     The image which is transformed is known as the \emph{moved} image, and the target image to
@@ -179,7 +179,7 @@
         \item Image unstressed sample ($\mu$-CT)
         \item Apply stress and image again
         \item Register to produce displacement field
-        \item Differentiation yields strain field in sample
+        \item Differentiate displacement to get strain field in sample
       \end{itemize}
   \end{itemize}
 \end{frame}
@@ -195,7 +195,6 @@
       m(\vec{x} + \vec{R}(\vec{x})) = f(\vec{x})
     \end{equation}
     \item To register the images, find a function $\vec{R}(\vec{x})$ that satisfies this equation
-    \alert Problem: this form of the equation uses the already registered image.
   \end{itemize}
 \end{frame}
 
@@ -207,7 +206,8 @@
       f(\vec{x}) - m(\vec{x}) \simeq \frac{1}{2} \vec{R}(\vec{x})\cdot(\nabla \cdot f(\vec{x}) + m(\vec{x}))
     \end{equation}
     \item This now uses the two input images and the gradient of the images
-    \alert Another problem: equation is underdetermined!
+    \item[~]
+    \item Problem: equation is underdetermined!
   \end{itemize}
 \end{frame}
 
@@ -222,15 +222,28 @@
   \frametitle{Finding the displacement field}
   \begin{itemize}
     \item Need to add additional constraints (Tikhonov Regularisation)
-    \item Add a smoothing constraint $\nabla^2 \vec{R}(\vec{x} = 0 $
-    \item Displacement is smooth is second derivative is zero everywhere
+    \item Constrain allows us to choose solution $\to$ want smoothest solution
+    \item Displacement is smooth if second derivative is zero everywhere
+    \item Laplacian operator:
+    \begin{equation}
+      \nabla^2 \vec{R}(\vec{x}) = 0
+    \end{equation}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Finding the displacement field}
+  \begin{itemize}
     \item Problem is actually discrete -- have pixels in image and nodes in displacement field
     \item Typically $N_{pixels} \gg N_{nodes}$, problem has $N_{nodes}$ DOF
+    \item Each map node uses information from many pixels
+    \item Represent as a matrix equation
     \begin{equation}
       \begin{bmatrix}\vec{f}-\vec{m} \\ 0\end{bmatrix} =
         \begin{bmatrix}\vec{T} \\ \vec{L}\end{bmatrix} \cdot \vec{R}
     \end{equation}
     \item $\vec{T}$ is a non-square matrix mapping pixel information to map node terms
+    \item $\vec{L}$ is the Laplacian matrix
   \end{itemize}
 \end{frame}
 
@@ -283,8 +296,10 @@
     \item pFIRE Tutorial: https://insigneo.github.io/pFIRE/docs.html
     \item[~]
     \item MareNostrum readme: /gpfs/projects/nct00/nct00016/README
+    \item Follow the instructions to set up pFIRE
     \item[~]
-    \item MareNostrum files: /gpfs/projects/nct00/nct00016/
+    \item MareNostrum files: /gpfs/projects/nct00/nct00016/tutorial\_files
+    \item Copy this to your own account
     \item[~]
     \item Please complete the application survey
   \end{itemize}
@@ -292,9 +307,6 @@
 
 \section{Coffee Break: 10:45 -- 11:00}
 \begin{frame}
-  \begin{center}
-    Thank You
-  \end{center}
 \end{frame}
 
 \end{document}
